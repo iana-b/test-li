@@ -43,6 +43,7 @@ class FreeProxySpider(Spider):
 
         results = {}
         batch_size = 29
+        # Pick HTTPS proxy to use for sending request
         https_proxies = list(filter(lambda p: 'HTTPS' in p['protocols'], self.proxies))
         proxy = None
         if https_proxies:
@@ -53,6 +54,7 @@ class FreeProxySpider(Spider):
             proxies_slice = self.proxies[i:i + batch_size]
             proxies_list = list(map(lambda p: f"{p['ip']}:{p['port']}", proxies_slice))
 
+            # Use the selected HTTPS proxy for the first 3 requests
             proxies_param = {}
             if proxy and index < 3:
                 proxies_param = {
