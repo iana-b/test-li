@@ -6,14 +6,14 @@
 ```bash
 pip install -r requirements.txt
 ```
-## Copy .env.example to .env and put your USER_ID
+### Copy .env.example to .env and put your USER_ID
 
 ## Run spider:
 ```bash
 scrapy crawl freeproxy_spider
 ```
 
-## Solution
+### Solution
 
 - Built with Scrapy and Python
 - Scrapes 150 free proxies and saves all proxies to `proxies.json`
