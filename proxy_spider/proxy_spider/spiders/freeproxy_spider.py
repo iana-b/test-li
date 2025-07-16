@@ -1,13 +1,17 @@
 import base64
 import json
+import os
 import requests
 from scrapy import Spider
 from datetime import datetime, timezone
+from dotenv import load_dotenv
 
-total = 150
+load_dotenv()
+USER_ID = os.getenv("USER_ID")
+TOTAL = 150
 
 
-class FreeproxySpider(Spider):
+class FreeProxySpider(Spider):
     name = "freeproxy_spider"
     allowed_domains = ["advanced.name"]
     start_urls = ["https://advanced.name/freeproxy", "https://advanced.name/freeproxy?page=2"]
@@ -17,7 +21,7 @@ class FreeproxySpider(Spider):
         self.proxies = []
 
     def parse(self, response):
-        rows_to_take = total - len(self.proxies)
+        rows_to_take = TOTAL - len(self.proxies)
         rows = response.xpath('//*[@id="table_proxies"]/tbody/tr')
         for row in rows[:rows_to_take]:
             ip_encoded = row.xpath('./td[2]/@data-ip').get()
@@ -39,14 +43,27 @@ class FreeproxySpider(Spider):
 
         results = {}
         batch_size = 29
+        https_proxies = list(filter(lambda p: 'HTTPS' in p['protocols'], self.proxies))
+        proxy = None
+        if https_proxies:
+            proxy = f"{https_proxies[0]['ip']}:{https_proxies[0]['port']}"
+
         for i in range(0, len(self.proxies), batch_size):
+            index = i // batch_size
             proxies_slice = self.proxies[i:i + batch_size]
             proxies_list = list(map(lambda p: f"{p['ip']}:{p['port']}", proxies_slice))
+
+            proxies_param = {}
+            if proxy and index < 3:
+                proxies_param = {
+                    "http": f"http://{proxy}",
+                    "https": f"http://{proxy}"
+                }
             headers = {
                 'Content-Type': 'application/json'
             }
             payload = {
-                "user_id": "t_f5c3f1d8",
+                "user_id": USER_ID,
                 "len": len(proxies_slice),
                 "proxies": ', '.join(proxies_list)
             }
@@ -54,12 +71,13 @@ class FreeproxySpider(Spider):
             session = requests.Session()
             session.get("https://test-rg8.ddns.net/api/get_token")
 
-            response = session.post("https://test-rg8.ddns.net/api/post_proxies", headers=headers, json=payload)
+            response = session.post(
+                "https://test-rg8.ddns.net/api/post_proxies", headers=headers, json=payload, proxies=proxies_param
+            )
             if response.ok:
                 data = response.json()
                 save_id = data['save_id']
                 results[save_id] = proxies_list
-                print(response.json())
             else:
                 print('ERROR', response.status_code, response.text)
 
